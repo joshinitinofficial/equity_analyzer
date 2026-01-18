@@ -21,7 +21,7 @@ def calculate_xirr(cashflows):
             for amt, d in zip(amounts, dates)
         )
 
-    low, high = -0.99, 5.0
+    low, high = -0.99, 3.0
     for _ in range(100):
         mid = (low + high) / 2
         val = npv(mid)
@@ -47,6 +47,26 @@ trade_file = st.sidebar.file_uploader(
 
 capital_file = st.sidebar.file_uploader(
     "Upload capital_timeline.csv", type=["csv"]
+)
+
+# =========================
+# SIDEBAR – USER INPUTS (NEW)
+# =========================
+st.sidebar.divider()
+st.sidebar.subheader("Strategy Parameters")
+
+INVESTMENT_PER_TRADE = st.sidebar.number_input(
+    "Investment per Trade (₹)",
+    min_value=1000,
+    step=1000,
+    value=10000
+)
+
+CHARGES_PER_TRADE = st.sidebar.number_input(
+    "Charges per Trade (₹)",
+    min_value=0,
+    step=5,
+    value=25
 )
 
 # =========================
@@ -104,20 +124,25 @@ max_capital = (
 )
 
 # =========================
-# ✅ CORRECT XIRR (PORTFOLIO LEVEL)
+# ✅ XIRR (USER INPUT DRIVEN – EXACT main.py LOGIC)
 # =========================
-cap = capital.sort_values("Date")
+cashflows = []
 
-initial_investment = cap["capital_deployed"].iloc[0]
-final_value = cap["capital_deployed"].iloc[-1]
+for _, row in trades.iterrows():
+    cashflows.append((row["entry_date"], -INVESTMENT_PER_TRADE))
+    cashflows.append(
+        (
+            row["exit_date"],
+            row["quantity"] * row["exit_price"] - CHARGES_PER_TRADE
+        )
+    )
 
-cashflow_df = pd.DataFrame({
-    "date": [cap["Date"].iloc[0], cap["Date"].iloc[-1]],
-    "amount": [-initial_investment, final_value]
-})
+cashflow_df = (
+    pd.DataFrame(cashflows, columns=["date", "amount"])
+    .sort_values("date")
+)
 
 xirr = calculate_xirr(cashflow_df) * 100
-
 
 # =========================
 # DISPLAY HEADER METRICS
@@ -165,7 +190,7 @@ st.subheader("📅 Monthly & Yearly PnL Summary")
 st.dataframe(pnl_pivot.style.format("{:.2f}"))
 
 # =========================
-# EQUITY CURVE (PURE PnL)
+# EQUITY CURVE
 # =========================
 trades["equity"] = trades["pnl"].cumsum()
 trades["equity_lakhs"] = trades["equity"].apply(to_lakhs)
