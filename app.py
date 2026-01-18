@@ -185,6 +185,24 @@ fig_equity = px.line(
 fig_equity.update_yaxes(tickformat=".1f")
 st.plotly_chart(fig_equity, use_container_width=True)
 
+# =====================================================
+# 🔥 ADDED: CAPITAL DEPLOYMENT CURVE (ONLY ADDITION)
+# =====================================================
+capital = capital.sort_values("Date")
+capital["capital_lakhs"] = capital["capital_deployed"].apply(to_lakhs)
+
+st.subheader("💰 Capital Deployment Curve")
+
+fig_capital = px.line(
+    capital,
+    x="Date",
+    y="capital_lakhs",
+    labels={"capital_lakhs": "Capital Deployed (₹ Lakhs)"}
+)
+
+fig_capital.update_yaxes(tickformat=".1f")
+st.plotly_chart(fig_capital, use_container_width=True)
+
 # =========================
 # YEARLY PNL
 # =========================
