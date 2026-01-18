@@ -104,9 +104,17 @@ max_capital = (
 )
 
 # =========================
-# XIRR 
+# ✅ FIXED XIRR (FROM CSV ONLY)
 # =========================
-xirr = capital.loc[capital["metric"] == "XIRR", "value"].iloc[0]
+cap = capital.sort_values("Date").copy()
+cap["capital_change"] = cap["capital_deployed"].diff()
+cap = cap.dropna()
+
+cashflow_df = cap.rename(
+    columns={"Date": "date", "capital_change": "amount"}
+)
+
+xirr = calculate_xirr(cashflow_df) * 100
 
 # =========================
 # DISPLAY HEADER METRICS
@@ -175,9 +183,9 @@ fig_equity = px.line(
 fig_equity.update_yaxes(tickformat=".1f")
 st.plotly_chart(fig_equity, use_container_width=True)
 
-# =====================================================
-# 🔥 ADDED: CAPITAL DEPLOYMENT CURVE (ONLY ADDITION)
-# =====================================================
+# =========================
+# CAPITAL DEPLOYMENT CURVE
+# =========================
 capital = capital.sort_values("Date")
 capital["capital_lakhs"] = capital["capital_deployed"].apply(to_lakhs)
 
