@@ -36,6 +36,32 @@ def calculate_xirr(cashflows):
 st.set_page_config(layout="wide", page_title="Strategy Performance Dashboard")
 st.title("📊 Strategy Performance Dashboard")
 
+st.markdown("""
+<style>
+.metric-card {
+    background: #111827;
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+    border: 1px solid #1f2937;
+}
+.metric-title {
+    font-size: 14px;
+    color: #9ca3af;
+}
+.metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+.green { color: #22c55e; }
+.blue { color: #3b82f6; }
+.red { color: #ef4444; }
+.yellow { color: #eab308; }
+.white { color: #f9fafb; }
+</style>
+""", unsafe_allow_html=True)
+
 # =========================
 # SIDEBAR – FILE UPLOAD
 # =========================
@@ -150,14 +176,62 @@ xirr = calculate_xirr(cashflow_df) * 100
 c1, c2, c3, c4 = st.columns(4)
 c5, c6, c7 = st.columns(3)
 
-c1.metric("Total Trades Executed", total_trades)
-c2.metric("Total Charges Paid", f"{total_charges / 1e5:.2f} L")
-c3.metric("Net P&L", f"{net_pnl / 1e5:.2f} L")
-c4.metric("Win Rate", f"{win_rate:.2f}%")
+with c1:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Total Trades</div>
+        <div class="metric-value white">{total_trades}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-c5.metric("Avg Holding Days", f"{avg_holding:.2f}")
-c6.metric("Max Capital Deployed", f"{max_capital / 1e5:.2f} L")
-c7.metric("Strategy XIRR", f"{xirr:.2f}%")
+with c2:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Total Charges</div>
+        <div class="metric-value red">{total_charges / 1e5:.2f} L</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c3:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Net P&L</div>
+        <div class="metric-value green">{net_pnl / 1e5:.2f} L</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c4:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Win Rate</div>
+        <div class="metric-value yellow">{win_rate:.2f}%</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c5:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Avg Holding Days</div>
+        <div class="metric-value white">{avg_holding:.2f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c6:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Max Capital Deployed</div>
+        <div class="metric-value blue">{max_capital / 1e5:.2f} L</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c7:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-title">Strategy XIRR</div>
+        <div class="metric-value green">{xirr:.2f}%</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 st.divider()
 
