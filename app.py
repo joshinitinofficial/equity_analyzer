@@ -212,15 +212,21 @@ fig_equity.update_yaxes(tickformat=".1f")
 st.plotly_chart(fig_equity, use_container_width=True)
 
 # =========================
-# CAPITAL DEPLOYMENT CURVE
+# CAPITAL DEPLOYMENT CURVE (MATCH main.py)
 # =========================
-capital = capital.sort_values("Date")
-capital["capital_lakhs"] = capital["capital_deployed"].apply(to_lakhs)
+capital_df = (
+    capital
+    .groupby("Date")
+    .last()
+    .reset_index()
+)
+
+capital_df["capital_lakhs"] = capital_df["capital_deployed"].apply(to_lakhs)
 
 st.subheader("💰 Capital Deployment Curve")
 
 fig_capital = px.line(
-    capital,
+    capital_df,
     x="Date",
     y="capital_lakhs",
     labels={"capital_lakhs": "Capital Deployed (₹ Lakhs)"}
@@ -228,6 +234,7 @@ fig_capital = px.line(
 
 fig_capital.update_yaxes(tickformat=".1f")
 st.plotly_chart(fig_capital, use_container_width=True)
+
 
 # =========================
 # YEARLY PNL
