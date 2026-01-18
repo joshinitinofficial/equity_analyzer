@@ -118,14 +118,14 @@ equity_df = trades[["exit_date", "equity_lakhs"]].rename(
 )
 
 # =========================
-# DRAWDOWN
+# DRAWDOWN (LAKHS – FIXED)
 # =========================
-equity_df["peak"] = equity_df["equity"].cummax()
-equity_df["drawdown"] = equity_df["equity"] - equity_df["peak"]
+equity_df["peak"] = equity_df["equity_lakhs"].cummax()
+equity_df["drawdown"] = equity_df["equity_lakhs"] - equity_df["peak"]
 max_dd = equity_df["drawdown"].min()
 
 # =========================
-# CAPITAL DEPLOYED
+# CAPITAL DEPLOYED (LAKHS – FIXED)
 # =========================
 capital_curve = (
     capital.groupby("Date")["capital_deployed"]
@@ -133,6 +133,7 @@ capital_curve = (
     .reset_index()
 )
 
+capital_curve["capital_lakhs"] = capital_curve["capital_deployed"].apply(to_lakhs)
 max_capital = capital_curve["capital_deployed"].max()
 
 # =========================
@@ -140,14 +141,13 @@ max_capital = capital_curve["capital_deployed"].max()
 # =========================
 total_profit = trades["pnl"].sum()
 total_return_pct = (total_profit / starting_capital) * 100
-avg_monthly = monthly_pnl["pnl"].mean()
 
 c1, c2, c3, c4 = st.columns(4)
 
 c1.metric("Total Profit", f"{total_profit / 1e5:.2f} L")
 c2.metric("Total Return", f"{total_return_pct:.2f}%")
 c3.metric("Max Capital Deployed", f"{max_capital / 1e5:.2f} L")
-c4.metric("Max Drawdown", f"{max_dd / 1e5:.2f} L")
+c4.metric("Max Drawdown", f"{max_dd:.2f} L")
 
 st.divider()
 
@@ -180,10 +180,11 @@ st.subheader("💰 Capital Deployed Over Time")
 fig_cap = px.line(
     capital_curve,
     x="Date",
-    y="capital_deployed",
-    labels={"capital_deployed": "Capital Deployed (₹)"}
+    y="capital_lakhs",
+    labels={"capital_lakhs": "Capital Deployed (₹ Lakhs)"}
 )
 
+fig_cap.update_yaxes(tickformat=".1f")
 st.plotly_chart(fig_cap, use_container_width=True)
 
 # =========================
@@ -207,5 +208,4 @@ fig_year = px.bar(
 )
 
 fig_year.update_yaxes(tickformat=".1f")
-
 st.plotly_chart(fig_year, use_container_width=True)
