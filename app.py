@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 
 # =========================
@@ -9,11 +8,32 @@ import plotly.express as px
 def to_lakhs(x):
     return x / 1e5
 
-st.set_page_config(
-    layout="wide",
-    page_title="Strategy Performance Dashboard"
-)
+# =========================
+# XIRR FUNCTION
+# =========================
+def calculate_xirr(cashflows):
+    dates = cashflows["date"]
+    amounts = cashflows["amount"]
 
+    def npv(rate):
+        return sum(
+            amt / ((1 + rate) ** ((d - dates.iloc[0]).days / 365))
+            for amt, d in zip(amounts, dates)
+        )
+
+    low, high = -0.99, 5.0
+    for _ in range(100):
+        mid = (low + high) / 2
+        val = npv(mid)
+        if abs(val) < 1e-6:
+            return mid
+        if val > 0:
+            low = mid
+        else:
+            high = mid
+    return mid
+
+st.set_page_config(layout="wide", page_title="Strategy Performance Dashboard")
 st.title("📊 Strategy Performance Dashboard")
 
 # =========================
@@ -27,17 +47,6 @@ trade_file = st.sidebar.file_uploader(
 
 capital_file = st.sidebar.file_uploader(
     "Upload capital_timeline.csv", type=["csv"]
-)
-
-starting_capital = st.sidebar.number_input(
-    "Starting Capital (₹)",
-    min_value=1,
-    value=300000,
-    step=50000
-)
-
-show_pct = st.sidebar.checkbox(
-    "Show PnL in Percentage (%)", False
 )
 
 # =========================
@@ -61,9 +70,14 @@ capital = pd.read_csv(
 )
 
 # =========================
-# BASIC SANITY CHECKS
+# SANITY CHECKS
 # =========================
-required_trade_cols = {"entry_date", "exit_date", "pnl"}
+required_trade_cols = {
+    "entry_date", "exit_date", "entry_price",
+    "exit_price", "quantity", "pnl",
+    "charges", "holding_days"
+}
+
 required_cap_cols = {"Date", "capital_deployed"}
 
 if not required_trade_cols.issubset(trades.columns):
@@ -75,17 +89,60 @@ if not required_cap_cols.issubset(capital.columns):
     st.stop()
 
 # =========================
-# PREP DATA
+# HEADER METRICS
+# =========================
+total_trades = len(trades)
+total_charges = trades["charges"].sum()
+net_pnl = trades["pnl"].sum()
+win_rate = (trades["pnl"] > 0).mean() * 100
+avg_holding = trades["holding_days"].mean()
+
+max_capital = (
+    capital.groupby("Date")["capital_deployed"]
+    .last()
+    .max()
+)
+
+# =========================
+# XIRR (TRUE CASHFLOWS)
+# =========================
+cashflows = []
+
+for _, row in trades.iterrows():
+    invested = row["entry_price"] * row["quantity"]
+    exit_value = row["exit_price"] * row["quantity"]
+
+    cashflows.append((row["entry_date"], -invested))
+    cashflows.append((row["exit_date"], exit_value))
+
+cashflow_df = pd.DataFrame(cashflows, columns=["date", "amount"])
+xirr = calculate_xirr(cashflow_df) * 100
+
+# =========================
+# DISPLAY HEADER METRICS
+# =========================
+c1, c2, c3, c4 = st.columns(4)
+c5, c6, c7 = st.columns(3)
+
+c1.metric("Total Trades Executed", total_trades)
+c2.metric("Total Charges Paid", f"{total_charges / 1e5:.2f} L")
+c3.metric("Net P&L", f"{net_pnl / 1e5:.2f} L")
+c4.metric("Win Rate", f"{win_rate:.2f}%")
+
+c5.metric("Avg Holding Days", f"{avg_holding:.2f}")
+c6.metric("Max Capital Deployed", f"{max_capital / 1e5:.2f} L")
+c7.metric("Strategy XIRR", f"{xirr:.2f}%")
+
+st.divider()
+
+# =========================
+# MONTHLY / YEARLY PNL
 # =========================
 trades = trades.sort_values("exit_date")
-
 trades["year"] = trades["exit_date"].dt.year
 trades["month"] = trades["exit_date"].dt.month
 trades["month_name"] = trades["exit_date"].dt.strftime("%b")
 
-# =========================
-# MONTHLY PNL
-# =========================
 monthly_pnl = (
     trades.groupby(["year", "month", "month_name"])["pnl"]
     .sum()
@@ -103,89 +160,30 @@ pnl_pivot = (
 
 pnl_pivot["Total"] = pnl_pivot.sum(axis=1)
 
-display_table = pnl_pivot.copy()
-if show_pct:
-    display_table = (display_table / starting_capital) * 100
+st.subheader("📅 Monthly & Yearly PnL Summary")
+st.dataframe(pnl_pivot.style.format("{:.2f}"))
 
 # =========================
-# EQUITY CURVE (LAKHS)
+# EQUITY CURVE (PURE PnL)
 # =========================
-trades["equity"] = starting_capital + trades["pnl"].cumsum()
+trades["equity"] = trades["pnl"].cumsum()
 trades["equity_lakhs"] = trades["equity"].apply(to_lakhs)
 
 equity_df = trades[["exit_date", "equity_lakhs"]].rename(
     columns={"exit_date": "Date"}
 )
 
-# =========================
-# DRAWDOWN (LAKHS – FIXED)
-# =========================
-equity_df["peak"] = equity_df["equity_lakhs"].cummax()
-equity_df["drawdown"] = equity_df["equity_lakhs"] - equity_df["peak"]
-max_dd = equity_df["drawdown"].min()
-
-# =========================
-# CAPITAL DEPLOYED (LAKHS – FIXED)
-# =========================
-capital_curve = (
-    capital.groupby("Date")["capital_deployed"]
-    .last()
-    .reset_index()
-)
-
-capital_curve["capital_lakhs"] = capital_curve["capital_deployed"].apply(to_lakhs)
-max_capital = capital_curve["capital_deployed"].max()
-
-# =========================
-# TOP METRICS
-# =========================
-total_profit = trades["pnl"].sum()
-total_return_pct = (total_profit / starting_capital) * 100
-
-c1, c2, c3, c4 = st.columns(4)
-
-c1.metric("Total Profit", f"{total_profit / 1e5:.2f} L")
-c2.metric("Total Return", f"{total_return_pct:.2f}%")
-c3.metric("Max Capital Deployed", f"{max_capital / 1e5:.2f} L")
-c4.metric("Max Drawdown", f"{max_dd:.2f} L")
-
-st.divider()
-
-# =========================
-# MONTHLY / YEARLY TABLE
-# =========================
-st.subheader("📅 Monthly & Yearly PnL Summary")
-st.dataframe(display_table.style.format("{:.2f}"))
-
-# =========================
-# EQUITY CURVE CHART
-# =========================
 st.subheader("📈 Equity Curve")
 
 fig_equity = px.line(
     equity_df,
     x="Date",
     y="equity_lakhs",
-    labels={"equity_lakhs": "Equity (₹ Lakhs)"}
+    labels={"equity_lakhs": "Cumulative PnL (₹ Lakhs)"}
 )
 
 fig_equity.update_yaxes(tickformat=".1f")
 st.plotly_chart(fig_equity, use_container_width=True)
-
-# =========================
-# CAPITAL DEPLOYED CURVE
-# =========================
-st.subheader("💰 Capital Deployed Over Time")
-
-fig_cap = px.line(
-    capital_curve,
-    x="Date",
-    y="capital_lakhs",
-    labels={"capital_lakhs": "Capital Deployed (₹ Lakhs)"}
-)
-
-fig_cap.update_yaxes(tickformat=".1f")
-st.plotly_chart(fig_cap, use_container_width=True)
 
 # =========================
 # YEARLY PNL
