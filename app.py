@@ -70,10 +70,12 @@ st.markdown("""
 st.markdown("""
 <style>
 div[data-testid="column"] {
-    margin-bottom: -12px;
+    margin-bottom: -4px;   
+    margin-top: 8px;       
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 # =========================
 # SIDEBAR – FILE UPLOAD
