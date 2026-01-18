@@ -104,13 +104,9 @@ max_capital = (
 )
 
 # =========================
-# XIRR (FROM CSV – PORTFOLIO LEVEL)
+# XIRR 
 # =========================
-cashflow_df = capital.rename(
-    columns={"Date": "date", "capital_change": "amount"}
-).sort_values("date")
-
-xirr = calculate_xirr(cashflow_df) * 100
+xirr = capital.loc[capital["metric"] == "XIRR", "value"].iloc[0]
 
 # =========================
 # DISPLAY HEADER METRICS
