@@ -104,18 +104,12 @@ max_capital = (
 )
 
 # =========================
-# XIRR (TRUE CASHFLOWS)
+# XIRR (FROM CSV – PORTFOLIO LEVEL)
 # =========================
-cashflows = []
+cashflow_df = capital.rename(
+    columns={"Date": "date", "capital_change": "amount"}
+).sort_values("date")
 
-for _, row in trades.iterrows():
-    invested = row["entry_price"] * row["quantity"]
-    exit_value = row["exit_price"] * row["quantity"]
-
-    cashflows.append((row["entry_date"], -invested))
-    cashflows.append((row["exit_date"], exit_value))
-
-cashflow_df = pd.DataFrame(cashflows, columns=["date", "amount"])
 xirr = calculate_xirr(cashflow_df) * 100
 
 # =========================
