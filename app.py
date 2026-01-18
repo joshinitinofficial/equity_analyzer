@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
+# =========================
+# LAKHS HELPER
+# =========================
+def to_lakhs(x):
+    return x / 1e5
+
 st.set_page_config(
     layout="wide",
     page_title="Strategy Performance Dashboard"
@@ -102,11 +108,12 @@ if show_pct:
     display_table = (display_table / starting_capital) * 100
 
 # =========================
-# EQUITY CURVE
+# EQUITY CURVE (LAKHS)
 # =========================
 trades["equity"] = starting_capital + trades["pnl"].cumsum()
+trades["equity_lakhs"] = trades["equity"].apply(to_lakhs)
 
-equity_df = trades[["exit_date", "equity"]].rename(
+equity_df = trades[["exit_date", "equity_lakhs"]].rename(
     columns={"exit_date": "Date"}
 )
 
@@ -137,10 +144,10 @@ avg_monthly = monthly_pnl["pnl"].mean()
 
 c1, c2, c3, c4 = st.columns(4)
 
-c1.metric("Total Profit", f"₹{total_profit:,.0f}")
+c1.metric("Total Profit", f"{total_profit / 1e5:.2f} L")
 c2.metric("Total Return", f"{total_return_pct:.2f}%")
-c3.metric("Max Capital Deployed", f"₹{max_capital:,.0f}")
-c4.metric("Max Drawdown", f"₹{max_dd:,.0f}")
+c3.metric("Max Capital Deployed", f"{max_capital / 1e5:.2f} L")
+c4.metric("Max Drawdown", f"{max_dd / 1e5:.2f} L")
 
 st.divider()
 
@@ -158,10 +165,11 @@ st.subheader("📈 Equity Curve")
 fig_equity = px.line(
     equity_df,
     x="Date",
-    y="equity",
-    labels={"equity": "Equity (₹)"}
+    y="equity_lakhs",
+    labels={"equity_lakhs": "Equity (₹ Lakhs)"}
 )
 
+fig_equity.update_yaxes(tickformat=".1f")
 st.plotly_chart(fig_equity, use_container_width=True)
 
 # =========================
@@ -189,11 +197,15 @@ yearly_pnl = (
     .reset_index()
 )
 
+yearly_pnl["pnl_lakhs"] = yearly_pnl["pnl"].apply(to_lakhs)
+
 fig_year = px.bar(
     yearly_pnl,
     x="year",
-    y="pnl",
-    labels={"pnl": "PnL (₹)", "year": "Year"}
+    y="pnl_lakhs",
+    labels={"pnl_lakhs": "PnL (₹ Lakhs)", "year": "Year"}
 )
+
+fig_year.update_yaxes(tickformat=".1f")
 
 st.plotly_chart(fig_year, use_container_width=True)
