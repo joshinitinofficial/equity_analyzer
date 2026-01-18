@@ -209,7 +209,7 @@ fig_equity = px.line(
 )
 
 fig_equity.update_yaxes(tickformat=".1f")
-st.plotly_chart(fig_equity, use_container_width=True)
+st.plotly_chart(fig_equity, width="stretch")
 
 # =========================
 # CAPITAL DEPLOYMENT CURVE (MATCH main.py)
@@ -233,7 +233,7 @@ fig_capital = px.line(
 )
 
 fig_capital.update_yaxes(tickformat=".1f")
-st.plotly_chart(fig_capital, use_container_width=True)
+st.plotly_chart(fig_capital, width="stretch")
 
 
 # =========================
@@ -257,4 +257,4 @@ fig_year = px.bar(
 )
 
 fig_year.update_yaxes(tickformat=".1f")
-st.plotly_chart(fig_year, use_container_width=True)
+st.plotly_chart(fig_year, width="stretch")
