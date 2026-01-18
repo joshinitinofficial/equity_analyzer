@@ -104,17 +104,20 @@ max_capital = (
 )
 
 # =========================
-# ✅ FIXED XIRR (FROM CSV ONLY)
+# ✅ CORRECT XIRR (PORTFOLIO LEVEL)
 # =========================
-cap = capital.sort_values("Date").copy()
-cap["capital_change"] = cap["capital_deployed"].diff()
-cap = cap.dropna()
+cap = capital.sort_values("Date")
 
-cashflow_df = cap.rename(
-    columns={"Date": "date", "capital_change": "amount"}
-)
+initial_investment = cap["capital_deployed"].iloc[0]
+final_value = cap["capital_deployed"].iloc[-1]
+
+cashflow_df = pd.DataFrame({
+    "date": [cap["Date"].iloc[0], cap["Date"].iloc[-1]],
+    "amount": [-initial_investment, final_value]
+})
 
 xirr = calculate_xirr(cashflow_df) * 100
+
 
 # =========================
 # DISPLAY HEADER METRICS
