@@ -39,21 +39,26 @@ st.title("📊 Strategy Performance Dashboard")
 st.markdown("""
 <style>
 .metric-card {
-    background: #111827;
-    border-radius: 12px;
-    padding: 18px;
+    background: #0b1220;
+    border-radius: 10px;
+    padding: 12px 14px;
     text-align: center;
     border: 1px solid #1f2937;
+    min-height: 90px;
 }
+
 .metric-title {
-    font-size: 14px;
+    font-size: 13px;
     color: #9ca3af;
+    margin-bottom: 4px;
 }
+
 .metric-value {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 700;
-    margin-top: 6px;
+    line-height: 1.2;
 }
+
 .green { color: #22c55e; }
 .blue { color: #3b82f6; }
 .red { color: #ef4444; }
