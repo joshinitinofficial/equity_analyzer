@@ -76,6 +76,15 @@ div[data-testid="column"] {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+div[data-testid="stHorizontalBlock"] {
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 # =========================
 # SIDEBAR – FILE UPLOAD
