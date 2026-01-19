@@ -36,56 +36,6 @@ def calculate_xirr(cashflows):
 st.set_page_config(layout="wide", page_title="Strategy Performance Dashboard")
 st.title("📊 Strategy Performance Dashboard")
 
-st.markdown("""
-<style>
-.metric-card {
-    background: #0b1220;
-    border-radius: 10px;
-    padding: 12px 14px;
-    text-align: center;
-    border: 1px solid #1f2937;
-    min-height: 90px;
-}
-
-.metric-title {
-    font-size: 13px;
-    color: #9ca3af;
-    margin-bottom: 4px;
-}
-
-.metric-value {
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-.green { color: #22c55e; }
-.blue { color: #3b82f6; }
-.red { color: #ef4444; }
-.yellow { color: #eab308; }
-.white { color: #f9fafb; }
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-div[data-testid="column"] {
-    margin-bottom: -4px;   
-    margin-top: 8px;       
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-div[data-testid="stHorizontalBlock"] {
-    gap: 8px !important;
-    margin-bottom: 8px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
 # =========================
 # SIDEBAR – FILE UPLOAD
 # =========================
@@ -100,7 +50,7 @@ capital_file = st.sidebar.file_uploader(
 )
 
 # =========================
-# SIDEBAR – USER INPUTS (NEW)
+# SIDEBAR – USER INPUTS
 # =========================
 st.sidebar.divider()
 st.sidebar.subheader("Strategy Parameters")
@@ -117,6 +67,16 @@ CHARGES_PER_TRADE = st.sidebar.number_input(
     min_value=0,
     step=5,
     value=25
+)
+
+# =========================
+# SIDEBAR – RETURN METRIC
+# =========================
+st.sidebar.divider()
+return_metric = st.sidebar.radio(
+    "Return Metric",
+    ["XIRR", "CAGR"],
+    horizontal=True
 )
 
 # =========================
@@ -140,23 +100,31 @@ capital = pd.read_csv(
 )
 
 # =========================
-# SANITY CHECKS
+# NORMALIZE TRADE LOG (OLD + NEW CSVs)
 # =========================
-required_trade_cols = {
-    "entry_date", "exit_date", "entry_price",
-    "exit_price", "quantity", "pnl",
-    "charges", "holding_days"
-}
+if "charges" not in trades.columns:
+    trades["charges"] = CHARGES_PER_TRADE
 
-required_cap_cols = {"Date", "capital_deployed"}
+if "holding_days" not in trades.columns:
+    trades["holding_days"] = (
+        trades["exit_date"] - trades["entry_date"]
+    ).dt.days
 
-if not required_trade_cols.issubset(trades.columns):
-    st.error(f"trade_log.csv missing columns: {required_trade_cols - set(trades.columns)}")
-    st.stop()
+if "index" not in trades.columns:
+    trades["index"] = "Strategy"
 
-if not required_cap_cols.issubset(capital.columns):
-    st.error(f"capital_timeline.csv missing columns: {required_cap_cols - set(capital.columns)}")
-    st.stop()
+for col in ["entry_price", "exit_price", "quantity", "pnl", "charges"]:
+    trades[col] = pd.to_numeric(trades[col], errors="coerce")
+
+# =========================
+# NORMALIZE CAPITAL TIMELINE
+# =========================
+capital["capital_deployed"] = pd.to_numeric(
+    capital["capital_deployed"], errors="coerce"
+)
+
+capital = capital.dropna(subset=["capital_deployed"])
+capital = capital.sort_values("Date")
 
 # =========================
 # HEADER METRICS
@@ -174,7 +142,7 @@ max_capital = (
 )
 
 # =========================
-# ✅ XIRR (USER INPUT DRIVEN – EXACT main.py LOGIC)
+# XIRR
 # =========================
 cashflows = []
 
@@ -195,69 +163,48 @@ cashflow_df = (
 xirr = calculate_xirr(cashflow_df) * 100
 
 # =========================
+# CAGR
+# =========================
+start_capital = capital["capital_deployed"].iloc[0]
+end_capital = capital["capital_deployed"].iloc[-1]
+
+start_date = capital["Date"].iloc[0]
+end_date = capital["Date"].iloc[-1]
+
+years = (end_date - start_date).days / 365
+
+if years > 0 and start_capital > 0:
+    cagr = ((end_capital / start_capital) ** (1 / years) - 1) * 100
+else:
+    cagr = 0
+
+# =========================
 # DISPLAY HEADER METRICS
 # =========================
 c1, c2, c3, c4 = st.columns(4)
 c5, c6, c7 = st.columns(3)
 
 with c1:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Total Trades</div>
-        <div class="metric-value white">{total_trades}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("Total Trades", total_trades)
 
 with c2:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Total Charges</div>
-        <div class="metric-value red">{total_charges / 1e5:.2f} L</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("Total Charges (L)", f"{total_charges / 1e5:.2f}")
 
 with c3:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Net P&L</div>
-        <div class="metric-value green">{net_pnl / 1e5:.2f} L</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("Net P&L (L)", f"{net_pnl / 1e5:.2f}")
 
 with c4:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Win Rate</div>
-        <div class="metric-value yellow">{win_rate:.2f}%</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("Win Rate (%)", f"{win_rate:.2f}")
 
 with c5:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Avg Holding Days</div>
-        <div class="metric-value white">{avg_holding:.2f}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("Avg Holding Days", f"{avg_holding:.2f}")
 
 with c6:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Max Capital Deployed</div>
-        <div class="metric-value blue">{max_capital / 1e5:.2f} L</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("Max Capital (L)", f"{max_capital / 1e5:.2f}")
 
 with c7:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-title">Strategy XIRR</div>
-        <div class="metric-value green">{xirr:.2f}%</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-st.divider()
+    value = xirr if return_metric == "XIRR" else cagr
+    st.metric(f"Strategy {return_metric} (%)", f"{value:.2f}")
 
 # =========================
 # MONTHLY / YEARLY PNL
@@ -306,11 +253,10 @@ fig_equity = px.line(
     labels={"equity_lakhs": "Cumulative PnL (₹ Lakhs)"}
 )
 
-fig_equity.update_yaxes(tickformat=".1f")
-st.plotly_chart(fig_equity, width="stretch")
+st.plotly_chart(fig_equity, use_container_width=True)
 
 # =========================
-# CAPITAL DEPLOYMENT CURVE (MATCH main.py)
+# CAPITAL DEPLOYMENT CURVE
 # =========================
 capital_df = (
     capital
@@ -327,12 +273,10 @@ fig_capital = px.line(
     capital_df,
     x="Date",
     y="capital_lakhs",
-    labels={"capital_lakhs": "Capital Deployed (₹ Lakhs)"}
+    labels={"capital_lakhs": "Capital (₹ Lakhs)"}
 )
 
-fig_capital.update_yaxes(tickformat=".1f")
-st.plotly_chart(fig_capital, width="stretch")
-
+st.plotly_chart(fig_capital, use_container_width=True)
 
 # =========================
 # YEARLY PNL
@@ -354,5 +298,4 @@ fig_year = px.bar(
     labels={"pnl_lakhs": "PnL (₹ Lakhs)", "year": "Year"}
 )
 
-fig_year.update_yaxes(tickformat=".1f")
-st.plotly_chart(fig_year, width="stretch")
+st.plotly_chart(fig_year, use_container_width=True)
