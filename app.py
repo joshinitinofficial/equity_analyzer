@@ -332,8 +332,8 @@ fig_capital = px.line(
 
 fig_capital.update_traces(
     fill="tozeroy",                        
-    line=dict(width=2, color="#ffffff"),   
-    fillcolor="rgba(255, 255, 255, 0.35)"   
+    line=dict(width=2, color="#60a5fa"),   
+    fillcolor="rgba(96, 165, 250, 0.55)"   
 )
 
 fig_capital.update_yaxes(tickformat=".1f")
