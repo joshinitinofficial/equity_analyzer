@@ -330,8 +330,24 @@ fig_capital = px.line(
     labels={"capital_lakhs": "Capital Deployed (₹ Lakhs)"}
 )
 
+fig_capital.update_traces(
+    fill="tozeroy",                      
+    line=dict(width=2, color="#7dd3fc"), 
+    fillcolor="rgba(125, 211, 252, 0.35)" 
+)
+
+fig_capital.update_layout(
+    plot_bgcolor="#020617",
+    paper_bgcolor="#020617",
+    font=dict(color="#e5e7eb"),
+    xaxis=dict(showgrid=False),
+    yaxis=dict(showgrid=True, gridcolor="#1f2937")
+)
+
 fig_capital.update_yaxes(tickformat=".1f")
+
 st.plotly_chart(fig_capital, width="stretch")
+
 
 
 # =========================
